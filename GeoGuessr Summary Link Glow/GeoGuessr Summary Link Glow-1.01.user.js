@@ -1,5 +1,6 @@
 // ==UserScript==
 // @name         GeoGuessr Summary Link Glow
+// @name:ja      GeoGuessr Summary Link Glow
 // @namespace    https://greasyfork.org/ja/users/1492018-sino87
 // @version      1.01
 // @description  Add cyan glow effect to game result links on GeoGuessr activities page
