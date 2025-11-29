@@ -1,12 +1,12 @@
 <h1 align="center"><img width="25" alt="download" src="https://github.com/user-attachments/assets/800a6507-084b-4b31-bf29-bb2dd9f991a3" />
 GeoGuessr Scripts</h1>
 
-A collection of UserScripts for GeoGuessr and Google Maps to enhance your experience.
+<p align="center"><a href="./README_JA.md">日本語はこちら</a></p>
 
-[**日本語 (Japanese)**](./README_JA.md)
+<p align="center">A collection of UserScripts for GeoGuessr and Google Maps to enhance your experience.</p>
 
-These scripts are also available on GreasyFork
-[https://greasyfork.org/ja/users/1492018-sino087](https://greasyfork.org/ja/users/1492018-sino087)
+<p align="center">These scripts are also available on GreasyFork
+<a href="https://greasyfork.org/ja/users/1492018-sino087">https://greasyfork.org/ja/users/1492018-sino087</a></p>
 
 ---
 
@@ -51,4 +51,4 @@ Enables you to copy the current URL simply by pressing `Ctrl+C` on Google Street
 
 <h1 align="center">License</h1>
 
-MIT License
+<p align="center">MIT License</p>

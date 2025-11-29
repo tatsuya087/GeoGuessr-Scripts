@@ -1,12 +1,10 @@
 <h1 align="center"><img width="25" alt="download" src="https://github.com/user-attachments/assets/800a6507-084b-4b31-bf29-bb2dd9f991a3" />
 GeoGuessr Scripts</h1>
 
-GeoGuessrやGoogleマップの体験を向上させるユーザースクリプト集です。
+<p align="center">GeoGuessrやGoogleマップの体験を向上させるユーザースクリプト集です。</p>
 
-[**English**](./README.md)
-
-これらのスクリプトはGreasyForkでも公開しています
-[https://greasyfork.org/ja/users/1492018-sino087](https://greasyfork.org/ja/users/1492018-sino087)
+<p align="center">GreasyForkでも公開しています
+<a href="https://greasyfork.org/ja/users/1492018-sino087">https://greasyfork.org/ja/users/1492018-sino087</a></p>
 
 ---
 
@@ -51,4 +49,4 @@ Googleストリートビューのページで `Ctrl+C` を押すだけで、現�
 
 <h1 align="center">ライセンス</h1>
 
-MIT License
+<p align="center">MIT License</p>
