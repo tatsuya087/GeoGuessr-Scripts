@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         GeoGuessr Result Link Glow
-// @name:ja      GeoGuessr リザルトリンクGlow
+// @name         GeoGuessr Summary Link Glow
+// @name:ja      GeoGuessr Summary Link Glow
 // @namespace    https://greasyfork.org/ja/users/1492018-sino87
 // @version      1.01
 // @description  Add cyan glow effect to game result links on GeoGuessr activities page
@@ -12,7 +12,7 @@
 // @license      MIT
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     function addGlowStyle() {
@@ -68,34 +68,20 @@
         const links = document.querySelectorAll('a.next-link_anchor__CQUJ3');
         links.forEach(link => {
             const href = link.href;
-            const text = link.textContent.trim();
-
             let shouldGlow = false;
 
-            if (href.includes('/duels/') && href.includes('/summary') &&
-                (text === 'game' || text === 'Game')) {
+            // Multiplayer games (Duels, Battle Royale, Team Duels)
+            if (href.includes('/summary')) {
                 shouldGlow = true;
             }
 
-            if (href.includes('/results/') && text.includes('points')) {
+            // Single player games (Standard, Streaks)
+            if (href.includes('/results/')) {
                 shouldGlow = true;
             }
 
-            if (href.includes('/battle-royale/') && href.includes('/summary') &&
-                text === 'Game') {
-                shouldGlow = true;
-            }
-
-            if (href.includes('/challenge/') && text.includes('points')) {
-                shouldGlow = true;
-            }
-
-            if (href.includes('/results/') && text.startsWith('The streak ended at ')) {
-                shouldGlow = true;
-            }
-
-            if (href.includes('/team-duels/') && href.includes('/summary') &&
-                (text === 'Game' || text === 'game')) {
+            // Challenges
+            if (href.includes('/challenge/')) {
                 shouldGlow = true;
             }
 
