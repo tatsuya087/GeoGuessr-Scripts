@@ -2,7 +2,7 @@
 // @name            Geoguessr Result Map Resizer
 // @name:ja         Geoguessr Result Map Resizer
 // @namespace       https://greasyfork.org/ja/users/1492018-sino87
-// @version         1.01
+// @version         1.10
 // @description     Resize Google Maps on Duels Game Breakdown pages from 1.00x to 1.50x magnification
 // @description:ja  DuelsのGame BreakdownページにあるGoogleマップのサイズを1.00倍から1.50倍まで調整可能
 // @icon            https://www.google.com/s2/favicons?sz=64&domain=geoguessr.com
@@ -11,7 +11,7 @@
 // @license         MIT
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
     const SCALE_STORAGE_KEY = "geoguessrMapScale";
@@ -60,33 +60,45 @@
             position: fixed;
             top: ${panelPosition.top}px;
             left: ${panelPosition.left}px;
-            width: 180px;
-            height: 90px;
-            background: rgba(15, 15, 15, 0.7);
+            width: 200px;
+            padding: 16px;
+            background: rgba(20, 20, 35, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: white;
-            border-radius: 8px;
-            padding: 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             z-index: 9999;
             font-family: 'Noto Sans', sans-serif;
-            font-weight: 600;
-            font-size: 16px;
-            cursor: move;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             align-items: center;
-            box-sizing: border-box;
+            gap: 12px;
+            transition: transform 0.1s ease;
         `;
 
         const title = document.createElement('div');
-        title.textContent = 'Map Resizer';
-        title.style.textAlign = 'center';
+        title.textContent = 'MAP RESIZER';
+        title.style.cssText = `
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: grab;
+            user-select: none;
+            width: 100%;
+            text-align: center;
+            padding-bottom: 4px;
+        `;
 
         const sliderContainer = document.createElement('div');
         sliderContainer.style.cssText = `
             width: 100%;
             display: flex;
             justify-content: center;
+            align-items: center;
+            position: relative;
         `;
 
         const slider = document.createElement('input');
@@ -97,41 +109,64 @@
         slider.style.cssText = `
             width: 100%;
             appearance: none;
-            height: 0.4rem;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            cursor: pointer;
             margin: 0;
-            border: 1px solid gray;
-            border-radius: 0.4rem;
             padding: 0;
-            background-color: black;
+            box-sizing: border-box;
         `;
+
+        // Dynamic background for slider track
+        const updateSliderBackground = (val) => {
+            const ratio = val;
+            slider.style.background = `linear-gradient(90deg, #7d8cff ${ratio}%, rgba(255, 255, 255, 0.15) ${ratio}%)`;
+        };
+        updateSliderBackground(slider.value);
+
 
         const sliderStyle = document.createElement('style');
         sliderStyle.textContent = `
-            #map-scale-panel input[type="range"]::-webkit-slider-runnable-track {
-                margin: 0 -5px;
-            }
             #map-scale-panel input[type="range"]::-webkit-slider-thumb {
                 -webkit-appearance: none;
                 appearance: none;
-                height: 16px;
-                width: 16px;
+                width: 18px;
+                height: 18px;
                 border-radius: 50%;
                 background: #7d8cff;
                 cursor: pointer;
-                border: 1px solid white;
+                border: 2px solid #fff;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                transition: transform 0.1s ease;
+                margin-top: -6px; /* Center thumb on track */
+            }
+            #map-scale-panel input[type="range"]::-webkit-slider-thumb:hover {
+                transform: scale(1.1);
+            }
+            #map-scale-panel input[type="range"]::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 6px;
+                cursor: pointer;
+                border-radius: 3px;
             }
         `;
         document.head.appendChild(sliderStyle);
 
         const scaleDisplay = document.createElement('div');
         scaleDisplay.textContent = '×' + currentScale.toFixed(2);
-        scaleDisplay.style.textAlign = 'center';
+        scaleDisplay.style.cssText = `
+            font-size: 20px;
+            font-weight: 800;
+            color: #7d8cff;
+            text-shadow: 0 0 10px rgba(125, 140, 255, 0.3);
+            font-variant-numeric: tabular-nums;
+        `;
 
-        slider.addEventListener('input', function(e) {
+        slider.addEventListener('input', function (e) {
             const sliderValue = parseFloat(e.target.value);
-
-            const ratio = sliderValue;
-            this.style.background = `linear-gradient(90deg, #7d8cff ${ratio}%, #000000 ${ratio}%)`;
+            updateSliderBackground(sliderValue);
 
             currentScale = 1.00 + (sliderValue / 100) * 0.50;
             scaleDisplay.textContent = '×' + currentScale.toFixed(2);
@@ -142,14 +177,15 @@
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
 
-        title.addEventListener('mousedown', function(e) {
+        title.addEventListener('mousedown', function (e) {
             isDragging = true;
+            title.style.cursor = 'grabbing';
             dragOffset.x = e.clientX - panel.offsetLeft;
             dragOffset.y = e.clientY - panel.offsetTop;
             e.preventDefault();
         });
 
-        document.addEventListener('mousemove', function(e) {
+        document.addEventListener('mousemove', function (e) {
             if (isDragging) {
                 const maxX = window.innerWidth - panel.offsetWidth;
                 const maxY = window.innerHeight - panel.offsetHeight;
@@ -165,9 +201,10 @@
             }
         });
 
-        document.addEventListener('mouseup', function() {
+        document.addEventListener('mouseup', function () {
             if (isDragging) {
                 isDragging = false;
+                title.style.cursor = 'grab';
                 panelPosition = {
                     top: parseInt(panel.style.top),
                     left: parseInt(panel.style.left)
@@ -176,10 +213,10 @@
             }
         });
 
-        sliderContainer.appendChild(slider);
         panel.appendChild(title);
-        panel.appendChild(sliderContainer);
         panel.appendChild(scaleDisplay);
+        panel.appendChild(sliderContainer);
+        sliderContainer.appendChild(slider);
 
         document.body.appendChild(panel);
     }
@@ -204,7 +241,7 @@
 
             // DOMContentLoadedの場合の追加実行
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('DOMContentLoaded', function () {
                     initializeMapResize();
                     createPanel();
                 });
