@@ -49,10 +49,7 @@
     }
 
     function createPanel() {
-        const existingPanel = document.getElementById('map-scale-panel');
-        if (existingPanel) {
-            existingPanel.remove();
-        }
+        if (document.getElementById('map-scale-panel')) return;
 
         const panel = document.createElement('div');
         panel.id = 'map-scale-panel';
@@ -221,52 +218,22 @@
         document.body.appendChild(panel);
     }
 
-    let lastUrl = window.location.href;
-
-    function checkForUrlChange() {
-        const currentUrl = window.location.href;
-        if (currentUrl !== lastUrl) {
-            lastUrl = currentUrl;
-            handlePageChange();
-        }
-    }
-
-    function handlePageChange() {
+    const observer = new MutationObserver(() => {
         const isDuelsResultPage = /^https:\/\/www\.geoguessr\.com(\/[^/]+)?\/duels\/[^/]+\/summary$/.test(window.location.href);
 
         if (isDuelsResultPage) {
-            // 即座に実行を試行
             initializeMapResize();
             createPanel();
-
-            // DOMContentLoadedの場合の追加実行
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function () {
-                    initializeMapResize();
-                    createPanel();
-                });
-            }
-
-            // より短い間隔で再試行
-            setTimeout(() => {
-                initializeMapResize();
-                createPanel();
-            }, 100);
-
-            setTimeout(() => {
-                initializeMapResize();
-                createPanel();
-            }, 500);
         } else {
             const panel = document.getElementById('map-scale-panel');
             if (panel) {
                 panel.remove();
             }
         }
-    }
+    });
 
-    // より短い間隔でURL変更をチェック
-    setInterval(checkForUrlChange, 100);
-
-    handlePageChange();
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
 })();
