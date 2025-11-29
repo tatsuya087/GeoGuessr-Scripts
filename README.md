@@ -1,4 +1,5 @@
-<h1 align="center">GeoGuessr Scripts</h1>
+<h1 align="center"><img width="25" alt="download" src="https://github.com/user-attachments/assets/800a6507-084b-4b31-bf29-bb2dd9f991a3" />
+GeoGuessr Scripts</h1>
 
 A collection of UserScripts for GeoGuessr and Google Maps to enhance your experience.
 GeoGuessrやGoogleマップの体験を向上させるユーザースクリプト集です。
