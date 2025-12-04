@@ -3,7 +3,7 @@ GeoGuessr Scripts</h1>
 
 <p align="center"><a href="./README_JA.md">日本語はこちら</a></p>
 
-<p align="center">A collection of UserScripts for GeoGuessr and Google Maps to enhance your experience.</p>
+<p align="center">Scripts for GeoGuessr and Google Maps to enhance your experience.</p>
 
 <p align="center">These scripts are also available on GreasyFork
 <a href="https://greasyfork.org/ja/users/1492018-sino087">https://greasyfork.org/ja/users/1492018-sino087</a></p>
