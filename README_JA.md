@@ -1,7 +1,7 @@
 <h1 align="center"><img width="25" alt="download" src="https://github.com/user-attachments/assets/800a6507-084b-4b31-bf29-bb2dd9f991a3" />
 GeoGuessr Scripts</h1>
 
-<p align="center">GeoGuessrやGoogleマップの体験を向上させるユーザースクリプト集です。</p>
+<p align="center">GeoGuessrやGoogleマップのスクリプト集です。</p>
 
 <p align="center">GreasyForkでも公開しています
 <a href="https://greasyfork.org/ja/users/1492018-sino087">https://greasyfork.org/ja/users/1492018-sino087</a></p>
