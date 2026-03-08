@@ -2,7 +2,7 @@
 // @name         Google Street View URL Copy
 // @name:ja      GoogleストリートビューURLコピー
 // @namespace    https://greasyfork.org/ja/users/1492018-sino87
-// @version      1.01
+// @version      1.1.0
 // @description  Copy the URL with just Ctrl+C on Google Street View pages
 // @description:ja GoogleストリートビューのページでCtrl+CをするだけでURLをコピーできます
 // @author       sino
@@ -29,84 +29,78 @@
 // @match        https://www.google.com.ar/maps/*
 // @match        https://www.google.co.th/maps/*
 // @grant        none
-// @downloadURL https://update.greasyfork.org/scripts/551779/Google%20Street%20View%20URL%20Copy.user.js
-// @updateURL https://update.greasyfork.org/scripts/551779/Google%20Street%20View%20URL%20Copy.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/551779/Google%20Street%20View%20URL%20Copy.user.js
+// @updateURL    https://update.greasyfork.org/scripts/551779/Google%20Street%20View%20URL%20Copy.meta.js
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
-    const isJapanese = navigator.language.startsWith('ja');
-    const messages = {
-        success: isJapanese ? 'URLをコピーしました！' : 'URL copied!',
-        error: isJapanese ? 'コピーに失敗しました' : 'Copy failed'
-    };
+    const isJa = navigator.language.startsWith('ja');
+    const MSG_SUCCESS = isJa ? 'URLをコピーしました！' : 'URL copied!';
+    const MSG_ERROR   = isJa ? 'コピーに失敗しました' : 'Copy failed';
 
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.key === 'c') {
-            const selection = window.getSelection();
-            if (selection && selection.toString().length > 0) {
-                return;
-            }
-
-            const currentUrl = window.location.href;
-
-            navigator.clipboard.writeText(currentUrl).then(function() {
-                showNotification(messages.success);
-            }).catch(function(err) {
-                console.error('URLのコピーに失敗しました:', err);
-                showNotification(messages.error, true);
-            });
-
-            e.preventDefault();
-        }
-    }, true);
-
-    function showNotification(message, isError = false) {
-        const notification = document.createElement('div');
-        notification.textContent = message;
-        notification.style.cssText = `
+    const style = document.createElement('style');
+    style.textContent = `
+        .gsv-copy-toast {
             position: fixed;
             top: 20px;
             left: 50%;
-            transform: translateX(-50%);
+            translate: -50% 0;
             padding: 15px 25px;
-            background-color: ${isError ? '#f44336' : '#4CAF50'};
-            color: white;
+            color: #fff;
             border-radius: 4px;
             font-size: 14px;
             font-weight: bold;
             z-index: 10000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            animation: slideDown 0.3s ease-out;
-        `;
-
-        if (!document.getElementById('notification-style')) {
-            const style = document.createElement('style');
-            style.id = 'notification-style';
-            style.textContent = `
-                @keyframes slideDown {
-                    from {
-                        transform: translateX(-50%) translateY(-100px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(-50%) translateY(0);
-                        opacity: 1;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
+            box-shadow: 0 2px 5px rgba(0,0,0,.3);
+            animation: gsv-copy-slide-in .3s ease-out;
+            pointer-events: none;
         }
+        .gsv-copy-toast.success { background-color: #4CAF50; }
+        .gsv-copy-toast.error   { background-color: #f44336; }
+        .gsv-copy-toast.out {
+            animation: gsv-copy-fade-out .3s ease-in forwards;
+        }
+        @keyframes gsv-copy-slide-in {
+            from { translate: -50% -100px; opacity: 0; }
+            to   { translate: -50% 0;      opacity: 1; }
+        }
+        @keyframes gsv-copy-fade-out {
+            to { opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
 
-        document.body.appendChild(notification);
+    let activeToast = null;
 
-        setTimeout(function() {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.3s';
-            setTimeout(function() {
-                notification.remove();
-            }, 300);
+    function showToast(message, isError = false) {
+        activeToast?.remove();
+
+        const el = document.createElement('div');
+        el.className = `gsv-copy-toast ${isError ? 'error' : 'success'}`;
+        el.textContent = message;
+        document.body.appendChild(el);
+        activeToast = el;
+
+        setTimeout(() => {
+            el.classList.add('out');
+            el.addEventListener('animationend', () => el.remove(), { once: true });
         }, 2000);
     }
+
+    document.addEventListener('keydown', (e) => {
+        if (!e.ctrlKey || e.key !== 'c') return;
+
+        const sel = window.getSelection();
+        if (sel && sel.toString().length > 0) return;
+
+        e.preventDefault();
+
+        const cleanUrl = location.origin + location.pathname;
+        navigator.clipboard.writeText(cleanUrl).then(
+            () => showToast(MSG_SUCCESS),
+            () => showToast(MSG_ERROR, true),
+        );
+    }, true);
 })();
