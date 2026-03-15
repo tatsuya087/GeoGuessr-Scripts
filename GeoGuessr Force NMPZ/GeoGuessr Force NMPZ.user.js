@@ -2,7 +2,7 @@
 // @name         GeoGuessr Force NMPZ
 // @name:ja      GeoGuessr 強制NMPZ
 // @namespace    http://tampermonkey.net/
-// @version      1.02
+// @version      1.1.0
 // @description  A script that forces NMPZ mode for yourself in GeoGuessr.
 // @description:ja GeoGuessrで自分だけ強制的にNMPZモードにするスクリプトです。
 // @author       sino
@@ -22,18 +22,35 @@
     'use strict';
 
     const STORAGE_KEY = 'nmpz_enabled';
+    const CSS_ID = 'nmpz-style';
+
+    const PANORAMA_MAP = [
+        { path: '/live-challenge/',     selector: '.game-panorama_panorama__tyXtc'  },
+        { path: '/duels/',              selector: '.duels-panorama_panorama__fLR_P' },
+        { path: '/team-duels/',         selector: '.duels-panorama_panorama__fLR_P' },
+        { path: '/battle-royale/',      selector: '.game_panoramaWrapper__r9aMX'    },
+        { path: '/competitive-streak/', selector: '.game_panorama__nn0wc'           },
+    ];
+
+    const CONTROLS = {
+        compass:       { selector: '.compass_compass__lRB0J',     hide: false, noPointer: true  },
+        zoomGroup:     { selector: '.styles_controlGroup__2t2NT', hide: true,  noPointer: false },
+        subController: { selector: '.styles_columnTwo__kyT60',    hide: true,  noPointer: false },
+    };
+
     let menuCommandId = null;
     let isEnabled = GM_getValue(STORAGE_KEY, true);
+    let panoramaObserver = null;
+    let panoramaRespawnObserver = null;
 
     function isGamePage() {
         const path = window.location.pathname;
-        return path.includes('/game/') ||
-               path.includes('/duels/') ||
-               path.includes('/team-duels/') ||
-               path.includes('/live-challenge/') ||
-               path.includes('/competitive-streak/') ||
-               path.includes('/battle-royale/') ||
-               path.includes('/bullseye/');
+        return PANORAMA_MAP.some(e => path.includes(e.path));
+    }
+
+    function getPanoramaSelector() {
+        const path = window.location.pathname;
+        return PANORAMA_MAP.find(e => path.includes(e.path))?.selector ?? null;
     }
 
     function preventEvent(e) {
@@ -71,18 +88,31 @@
         }
     }
 
-    function disableMovementAndZoom() {
-        if (!isGamePage() || !isEnabled) return false;
+    function injectCSS() {
+        if (document.getElementById(CSS_ID)) return;
 
-        const panorama = document.querySelector('div.game_panorama__6X071, div.duels-panorama_panorama__fLR_P, div.game-panorama_panorama__tyXtc, div.game_panorama__nn0wc, div.game_panorama__sRtAT, div.game-panorama_panorama__mlqJ_');
-        if (!panorama || panorama.dataset.disableApplied === 'true') {
-            return panorama && panorama.dataset.disableApplied === 'true';
-        }
+        const rules = Object.values(CONTROLS).map(({ selector, hide, noPointer }) => {
+            const declarations = [
+                hide      ? 'display: none !important;'        : null,
+                noPointer ? 'pointer-events: none !important;' : null,
+            ].filter(Boolean).join(' ');
+            return `${selector} { ${declarations} }`;
+        });
 
-        let overlay = document.getElementById('geoguessr-disable-overlay');
-        if (overlay) overlay.remove();
+        const style = document.createElement('style');
+        style.id = CSS_ID;
+        style.textContent = rules.join('\n');
+        document.head.appendChild(style);
+    }
 
-        overlay = document.createElement('div');
+    function removeCSS() {
+        document.getElementById(CSS_ID)?.remove();
+    }
+
+    function applyOverlay(panorama) {
+        if (panorama.dataset.disableApplied === 'true') return;
+
+        const overlay = document.createElement('div');
         overlay.id = 'geoguessr-disable-overlay';
         overlay.style.cssText = `
             position: absolute;
@@ -96,171 +126,97 @@
             pointer-events: auto;
         `;
 
-        overlay.addEventListener('mousemove', preventDragAndZoom, true);
-        overlay.addEventListener('wheel', preventDragAndZoom, true);
-        overlay.addEventListener('touchmove', preventDragAndZoom, true);
-        overlay.addEventListener('drag', preventDragAndZoom, true);
-        overlay.addEventListener('dragstart', preventDragAndZoom, true);
-        overlay.addEventListener('contextmenu', preventEvent, true);
+        overlay.addEventListener('mousemove',   preventDragAndZoom, true);
+        overlay.addEventListener('wheel',       preventDragAndZoom, true);
+        overlay.addEventListener('touchmove',   preventDragAndZoom, true);
+        overlay.addEventListener('drag',        preventDragAndZoom, true);
+        overlay.addEventListener('dragstart',   preventDragAndZoom, true);
+        overlay.addEventListener('contextmenu', preventEvent,       true);
 
-        const currentPosition = getComputedStyle(panorama).position;
-        if (currentPosition === 'static') {
+        if (getComputedStyle(panorama).position === 'static') {
             panorama.style.position = 'relative';
         }
 
         panorama.appendChild(overlay);
         panorama.dataset.disableApplied = 'true';
-
-        return true;
-    }
-
-    const compassEventHandlers = new WeakMap();
-
-    function disableControls() {
-        if (!isGamePage() || !isEnabled) return false;
-
-        let foundAny = false;
-
-        const compassButtons = document.querySelectorAll('button.compass_compass__lRB0J.compass_clickable__Yt4eB[data-qa="compass"]');
-        compassButtons.forEach(button => {
-            if (!button.dataset.clickDisabled) {
-                const handlers = {
-                    click: (e) => preventEvent(e),
-                    mousedown: (e) => preventEvent(e),
-                    mouseup: (e) => preventEvent(e),
-                    touchstart: (e) => preventEvent(e),
-                    touchend: (e) => preventEvent(e)
-                };
-                
-                compassEventHandlers.set(button, handlers);
-                
-                button.addEventListener('click', handlers.click, true);
-                button.addEventListener('mousedown', handlers.mousedown, true);
-                button.addEventListener('mouseup', handlers.mouseup, true);
-                button.addEventListener('touchstart', handlers.touchstart, true);
-                button.addEventListener('touchend', handlers.touchend, true);
-                button.style.pointerEvents = 'none';
-                button.dataset.clickDisabled = 'true';
-                foundAny = true;
-            }
-        });
-
-        return foundAny;
-    }
-
-    function enableControls() {
-        const compassButtons = document.querySelectorAll('button.compass_compass__lRB0J.compass_clickable__Yt4eB[data-qa="compass"]');
-        compassButtons.forEach(button => {
-            if (button.dataset.clickDisabled) {
-                const handlers = compassEventHandlers.get(button);
-                if (handlers) {
-                    button.removeEventListener('click', handlers.click, true);
-                    button.removeEventListener('mousedown', handlers.mousedown, true);
-                    button.removeEventListener('mouseup', handlers.mouseup, true);
-                    button.removeEventListener('touchstart', handlers.touchstart, true);
-                    button.removeEventListener('touchend', handlers.touchend, true);
-                    compassEventHandlers.delete(button);
-                }
-                button.style.pointerEvents = '';
-                delete button.dataset.clickDisabled;
-            }
-        });
-    }
-
-    function removeControlGroups() {
-        if (!isGamePage() || !isEnabled) return false;
-
-        let foundAny = false;
-        const controlGroups = document.querySelectorAll('div.styles_controlGroup__2t2NT');
-        controlGroups.forEach(group => {
-            if (!group.dataset.removed) {
-                group.dataset.removed = 'true';
-                group.style.display = 'none';
-                foundAny = true;
-            }
-        });
-
-        const columnTwo = document.querySelectorAll('div.styles_columnTwo__kyT60');
-        columnTwo.forEach(col => {
-            if (!col.dataset.removed) {
-                col.dataset.removed = 'true';
-                col.style.display = 'none';
-                foundAny = true;
-            }
-        });
-
-        return foundAny;
-    }
-
-    function restoreControlGroups() {
-        const controlGroups = document.querySelectorAll('div.styles_controlGroup__2t2NT');
-        controlGroups.forEach(group => {
-            if (group.dataset.removed) {
-                group.style.display = '';
-                delete group.dataset.removed;
-            }
-        });
-
-        const columnTwo = document.querySelectorAll('div.styles_columnTwo__kyT60');
-        columnTwo.forEach(col => {
-            if (col.dataset.removed) {
-                col.style.display = '';
-                delete col.dataset.removed;
-            }
-        });
-    }
-
-    function removeTooltips() {
-        if (!isGamePage() || !isEnabled) return false;
-
-        let foundAny = false;
-
-        const tooltips = document.querySelectorAll('div.tooltip_tooltip__3D6bz');
-        tooltips.forEach(tooltip => {
-            if (!tooltip.dataset.removed) {
-                tooltip.dataset.removed = 'true';
-                tooltip.style.display = 'none';
-                foundAny = true;
-            }
-        });
-
-        return foundAny;
-    }
-
-    function restoreTooltips() {
-        const tooltips = document.querySelectorAll('div.tooltip_tooltip__3D6bz');
-        tooltips.forEach(tooltip => {
-            if (tooltip.dataset.removed) {
-                tooltip.style.display = '';
-                delete tooltip.dataset.removed;
-            }
-        });
     }
 
     function removeOverlay() {
-        const overlay = document.getElementById('geoguessr-disable-overlay');
-        if (overlay) overlay.remove();
+        document.getElementById('geoguessr-disable-overlay')?.remove();
 
-        const panoramas = document.querySelectorAll('div.game_panorama__6X071, div.duels-panorama_panorama__fLR_P, div.game-panorama_panorama__tyXtc, div.game_panorama__nn0wc, div.game_panorama__sRtAT, div.game-panorama_panorama__mlqJ_');
-        panoramas.forEach(panorama => {
-            delete panorama.dataset.disableApplied;
+        const selector = getPanoramaSelector();
+        if (!selector) return;
+        const panorama = document.querySelector(selector);
+        if (panorama) delete panorama.dataset.disableApplied;
+    }
+
+    function startPanoramaRespawnObserver() {
+        if (panoramaRespawnObserver) return;
+
+        const selector = getPanoramaSelector();
+        if (!selector) return;
+
+        panoramaRespawnObserver = new MutationObserver(() => {
+            const panorama = document.querySelector(selector);
+            if (panorama && panorama.dataset.disableApplied !== 'true') {
+                applyOverlay(panorama);
+            }
         });
+
+        panoramaRespawnObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function stopPanoramaRespawnObserver() {
+        if (panoramaRespawnObserver) {
+            panoramaRespawnObserver.disconnect();
+            panoramaRespawnObserver = null;
+        }
+    }
+
+    function waitForPanorama() {
+        if (panoramaObserver) {
+            panoramaObserver.disconnect();
+            panoramaObserver = null;
+        }
+
+        const selector = getPanoramaSelector();
+        if (!selector) return;
+
+        const existing = document.querySelector(selector);
+        if (existing) {
+            applyOverlay(existing);
+            startPanoramaRespawnObserver();
+            return;
+        }
+
+        panoramaObserver = new MutationObserver(() => {
+            const panorama = document.querySelector(selector);
+            if (panorama) {
+                panoramaObserver.disconnect();
+                panoramaObserver = null;
+                applyOverlay(panorama);
+                startPanoramaRespawnObserver();
+            }
+        });
+
+        panoramaObserver.observe(document.body, { childList: true, subtree: true });
     }
 
     function enableFeatures() {
         if (isGamePage()) {
-            disableMovementAndZoom();
-            disableControls();
-            removeControlGroups();
-            removeTooltips();
+            injectCSS();
+            waitForPanorama();
         }
     }
 
     function disableFeatures() {
+        if (panoramaObserver) {
+            panoramaObserver.disconnect();
+            panoramaObserver = null;
+        }
+        stopPanoramaRespawnObserver();
         removeOverlay();
-        enableControls();
-        restoreControlGroups();
-        restoreTooltips();
+        removeCSS();
     }
 
     function toggleEnabled() {
@@ -283,73 +239,35 @@
 
         const status = isEnabled ? 'Enabled ✅' : 'Disabled ❌';
         menuCommandId = GM_registerMenuCommand(`NMPZ Mode: ${status}`, toggleEnabled, {
-            autoClose: false
+            autoClose: false,
         });
     }
 
-    document.addEventListener('keydown', preventMovementKeys, true);
-    document.addEventListener('keyup', preventMovementKeys, true);
+    document.addEventListener('keydown',  preventMovementKeys, true);
+    document.addEventListener('keyup',    preventMovementKeys, true);
     document.addEventListener('keypress', preventMovementKeys, true);
 
     let currentUrl = window.location.href;
+
     const urlObserver = new MutationObserver(() => {
         if (currentUrl !== window.location.href) {
             currentUrl = window.location.href;
 
-            if (isGamePage()) {
-                removeOverlay();
+            stopPanoramaRespawnObserver();
+            removeOverlay();
 
-                let attempts = 0;
-                const maxAttempts = 20;
-                const intervalId = setInterval(() => {
-                    attempts++;
-                    if (isEnabled) {
-                        disableMovementAndZoom();
-                        disableControls();
-                        removeControlGroups();
-                        removeTooltips();
-                    }
-
-                    if (attempts >= maxAttempts) {
-                        clearInterval(intervalId);
-                    }
-                }, 500);
-            } else {
-                removeOverlay();
+            if (isGamePage() && isEnabled) {
+                waitForPanorama();
             }
         }
     });
 
-    urlObserver.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    urlObserver.observe(document.body, { childList: true, subtree: true });
 
-    setInterval(() => {
-        if (isGamePage() && isEnabled) {
-            disableControls();
-            removeControlGroups();
-            removeTooltips();
-        }
-    }, 100);
-
-    if (isGamePage()) {
-        let attempts = 0;
-        const maxAttempts = 20;
-        const intervalId = setInterval(() => {
-            attempts++;
-            if (isEnabled) {
-                disableMovementAndZoom();
-                disableControls();
-                removeControlGroups();
-                removeTooltips();
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(intervalId);
-            }
-        }, 500);
+    if (isGamePage() && isEnabled) {
+        enableFeatures();
     }
 
     updateMenuCommand();
+
 })();
